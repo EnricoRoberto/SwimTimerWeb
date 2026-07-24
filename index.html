@@ -444,16 +444,12 @@
     /* ── LOGO WATERMARK ───────────────────────────────────────── */
     #logo-watermark {
       position: fixed;
-      bottom: 80px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 220px;
-      height: 220px;
+      inset: 0;
       background-image: var(--logo-url);
-      background-size: contain;
-      background-repeat: no-repeat;
-      background-position: center;
-      opacity: 0.15;
+      background-size: 90px 90px;
+      background-repeat: repeat;
+      background-position: 0 0;
+      opacity: 0.08;
       pointer-events: none;
       z-index: 0;
     }
