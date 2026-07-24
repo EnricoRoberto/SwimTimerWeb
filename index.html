@@ -179,6 +179,7 @@
       position: absolute;
       top: 0; left: 0;
       width: 100%; height: 100%;
+      z-index: 0;
     }
 
     /* ── SETUP BAR ────────────────────────────────────────────── */
@@ -446,12 +447,12 @@
       position: fixed;
       inset: 0;
       background-image: var(--logo-url);
-      background-size: 90px 90px;
+      background-size: 60px 60px;
       background-repeat: repeat;
       background-position: 0 0;
       opacity: 0.08;
       pointer-events: none;
-      z-index: 0;
+      z-index: 1;
     }
   </style>
 </head>
