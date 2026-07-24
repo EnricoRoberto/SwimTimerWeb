@@ -1,0 +1,2243 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>SwimTimer</title>
+
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0D3B5E">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="SwimTimer">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+  <style>
+    /* ── RESET & BASE ─────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* ── TEMA CHIARO (default) ───────────────────────────────── */
+    :root {
+      --pool-deep:      #0A2942;
+      --pool-mid:       #0D3B5E;
+      --pool-surface:   #1565A0;
+      --pool-light:     #1976D2;
+      --wave1:          #29B6F6;
+      --wave2:          #0288D1;
+      --gold:           #FFD600;
+      --text-primary:   #FFFFFF;
+      --text-secondary: #BBE0F0;
+      --fast:           #4CAF50;
+      --slow:           #F44336;
+      --btn-start:      #1976D2;
+      --btn-lap:        #546E7A;
+      --btn-reset:      #37474F;
+      --radius:         10px;
+      --wave-top:       #0D3B5E;
+      --wave-bot:       #1565A0;
+      --wave-c1:        rgba(41,182,246,0.30);
+      --wave-c2:        rgba(2,136,209,0.25);
+    }
+
+    /* ── TEMA SCURO ──────────────────────────────────────────── */
+    [data-theme="dark"] {
+      --pool-deep:      #0A0A0A;
+      --pool-mid:       #121212;
+      --pool-surface:   #1E1E1E;
+      --pool-light:     #29B6F6;
+      --wave1:          #1565C0;
+      --wave2:          #0D47A1;
+      --gold:           #FFD600;
+      --text-primary:   #FFFFFF;
+      --text-secondary: #90CAF9;
+      --fast:           #66BB6A;
+      --slow:           #EF5350;
+      --btn-start:      #1565C0;
+      --btn-lap:        #263238;
+      --btn-reset:      #1A1A1A;
+      --wave-top:       #121212;
+      --wave-bot:       #1E1E1E;
+      --wave-c1:        rgba(21,101,192,0.35);
+      --wave-c2:        rgba(13,71,161,0.30);
+    }
+
+    /* ── TEMA MULTICOLOR ─────────────────────────────────────── */
+    [data-theme="multi"] {
+      --pool-deep:      #0D0D1A;
+      --pool-mid:       #12122A;
+      --pool-surface:   #1A1A3E;
+      --pool-light:     #7C4DFF;
+      --wave1:          #00BCD4;
+      --wave2:          #7C4DFF;
+      --gold:           #FFD600;
+      --text-primary:   #FFFFFF;
+      --text-secondary: #CE93D8;
+      --fast:           #69F0AE;
+      --slow:           #FF5252;
+      --btn-start:      #00C853;
+      --btn-lap:        #1976D2;
+      --btn-reset:      #37474F;
+      --wave-top:       #12122A;
+      --wave-bot:       #1A1A3E;
+      --wave-c1:        rgba(0,188,212,0.30);
+      --wave-c2:        rgba(124,77,255,0.25);
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--pool-deep);
+      color: var(--text-primary);
+      font-family: Arial, sans-serif;
+      overflow: hidden;
+    }
+
+    /* ── LAYOUT ───────────────────────────────────────────────── */
+    #app {
+      display: flex;
+      flex-direction: column;
+      height: 100dvh;
+      max-width: 480px;
+      margin: 0 auto;
+    }
+
+    /* ── TOOLBAR ──────────────────────────────────────────────── */
+    #toolbar {
+      background: var(--pool-mid);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 16px;
+      flex-shrink: 0;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      position: relative;
+      z-index: 10;
+    }
+    #toolbar h1 {
+      font-size: 20px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+    #menu-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 6px;
+      border-radius: 6px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    #menu-btn span {
+      display: block;
+      width: 22px;
+      height: 2px;
+      background: white;
+      border-radius: 2px;
+    }
+
+    /* ── DROPDOWN MENU ────────────────────────────────────────── */
+    #menu-dropdown {
+      display: none;
+      position: absolute;
+      top: 52px;
+      right: 12px;
+      background: var(--pool-mid);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: var(--radius);
+      overflow: hidden;
+      z-index: 100;
+      min-width: 180px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    }
+    #menu-dropdown.open { display: block; }
+    #menu-dropdown button {
+      display: block;
+      width: 100%;
+      background: none;
+      border: none;
+      color: white;
+      font-size: 15px;
+      padding: 14px 18px;
+      text-align: left;
+      cursor: pointer;
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+    }
+    #menu-dropdown button:last-child { border-bottom: none; }
+    #menu-dropdown button:hover { background: rgba(255,255,255,0.08); }
+
+    /* ── WAVE + SWIMMER ───────────────────────────────────────── */
+    #wave-area {
+      position: relative;
+      height: 90px;
+      flex-shrink: 0;
+      overflow: hidden;
+    }
+    #swim-canvas {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+    }
+
+    /* ── SETUP BAR ────────────────────────────────────────────── */
+    #setup-bar {
+      background: var(--pool-deep);
+      padding: 8px 12px;
+      flex-shrink: 0;
+    }
+    #btn-setup {
+      width: 100%;
+      background: var(--gold);
+      color: #212121;
+      border: none;
+      border-radius: var(--radius);
+      padding: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    #btn-setup:hover { filter: brightness(1.08); }
+    #setup-info {
+      display: none;
+      background: rgba(255,255,255,0.07);
+      border-radius: var(--radius);
+      padding: 8px 12px;
+      font-size: 13px;
+      color: var(--text-secondary);
+      text-align: center;
+    }
+
+    /* ── TIMER DISPLAY ────────────────────────────────────────── */
+    #timer-area {
+      position: relative;
+      text-align: center;
+      padding: 14px 16px 8px;
+      flex-shrink: 0;
+    }
+    #display-lap-counter {
+      display: none;
+      position: absolute;
+      top: 10px;
+      right: 12px;
+      font-size: 20px;
+      font-weight: 700;
+      font-family: 'Courier New', monospace;
+      color: var(--gold);
+      line-height: 1;
+      text-align: center;
+      min-width: 56px;
+    }
+    #display-lap-counter span {
+      font-size: 11px;
+      color: var(--text-secondary);
+      font-weight: 400;
+      display: block;
+      text-align: center;
+      margin-bottom: 2px;
+    }
+    #display-total {
+      font-size: 52px;
+      font-weight: 300;
+      letter-spacing: 1px;
+      font-family: 'Courier New', monospace;
+      line-height: 1;
+      padding-right: 64px; /* spazio per il counter */
+      padding-left: 8px;
+    }
+    #display-lap {
+      font-size: 15px;
+      color: var(--text-secondary);
+      margin-top: 6px;
+    }
+
+    /* ── CONTROL BUTTONS ──────────────────────────────────────── */
+    #controls {
+      display: flex;
+      gap: 8px;
+      padding: 10px 12px;
+      flex-shrink: 0;
+    }
+    .ctrl-btn {
+      border: none;
+      border-radius: var(--radius);
+      color: white;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 14px 0;
+      transition: filter 0.15s, transform 0.1s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .ctrl-btn:active { transform: scale(0.95); filter: brightness(0.85); }
+    .ctrl-btn:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
+
+    #btn-startstop { flex: 2.2; background: var(--btn-start); }
+    #btn-lap       { flex: 1.5; background: var(--btn-lap); }
+    #btn-reset     { flex: 0.9; background: var(--btn-reset); }
+
+    #btn-startstop.running { background: #C62828; }
+
+    /* ── LAPS LIST ────────────────────────────────────────────── */
+    #laps-area {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0 12px 12px;
+    }
+    #laps-list {
+      background: #0D1F2D;
+      border-radius: var(--radius);
+      overflow: hidden;
+      min-height: 60px;
+    }
+    #laps-empty {
+      padding: 20px;
+      text-align: center;
+      color: var(--text-secondary);
+      font-size: 13px;
+    }
+    .lap-item {
+      display: flex;
+      align-items: center;
+      padding: 10px 14px;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      font-size: 14px;
+      gap: 10px;
+    }
+    .lap-item:last-child { border-bottom: none; }
+    .lap-num {
+      color: var(--text-secondary);
+      font-size: 12px;
+      width: 28px;
+      flex-shrink: 0;
+    }
+    .lap-time {
+      font-family: 'Courier New', monospace;
+      font-size: 16px;
+      flex: 1;
+    }
+    .lap-delta {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+    .lap-item.fastest .lap-time { color: var(--fast); font-weight: bold; }
+    .lap-item.slowest .lap-time { color: var(--slow); }
+    .lap-badge {
+      font-size: 11px;
+      padding: 2px 7px;
+      border-radius: 8px;
+      font-weight: bold;
+    }
+    .lap-badge.fast { background: rgba(76,175,80,0.2); color: var(--fast); }
+    .lap-badge.slow { background: rgba(244,67,54,0.2);  color: var(--slow); }
+
+    /* ── MODAL OVERLAY ────────────────────────────────────────── */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      z-index: 200;
+      align-items: flex-end;
+      justify-content: center;
+    }
+    .modal-overlay.open {
+      display: flex;
+      animation: fadeIn 0.15s ease;
+    }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+    .modal-sheet {
+      background: var(--pool-mid);
+      border-radius: 18px 18px 0 0;
+      padding: 24px 20px 36px;
+      width: 100%;
+      max-width: 480px;
+      animation: slideUp 0.2s ease;
+    }
+    @keyframes slideUp {
+      from { transform: translateY(40px); opacity: 0; }
+      to   { transform: translateY(0);    opacity: 1; }
+    }
+    .modal-title {
+      font-size: 17px;
+      font-weight: 700;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    .modal-field { margin-bottom: 14px; }
+    .modal-field label {
+      display: block;
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-bottom: 5px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .modal-field input,
+    .modal-field select {
+      width: 100%;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 8px;
+      color: white;
+      font-size: 15px;
+      padding: 10px 12px;
+      outline: none;
+    }
+    .modal-field input:focus,
+    .modal-field select:focus {
+      border-color: var(--wave1);
+    }
+    .modal-field select option { background: var(--pool-mid); color: white; }
+
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+    .modal-actions button {
+      flex: 1;
+      padding: 13px;
+      border: none;
+      border-radius: var(--radius);
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-primary   { background: var(--pool-light); color: white; }
+    .btn-secondary { background: rgba(255,255,255,0.1); color: white; }
+    .btn-danger    { background: #B71C1C; color: white; }
+
+    .modal-divider {
+      height: 1px;
+      background: rgba(255,255,255,0.1);
+      margin: 14px 0 10px;
+    }
+    .modal-section-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .modal-row {
+      display: flex;
+      gap: 10px;
+    }
+
+    /* scrollbar */
+    #laps-area::-webkit-scrollbar { width: 4px; }
+    #laps-area::-webkit-scrollbar-track { background: transparent; }
+    #laps-area::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 2px; }
+  </style>
+</head>
+<body>
+
+<div id="app">
+
+  <!-- TOOLBAR -->
+  <div id="toolbar">
+    <h1>SwimTimer</h1>
+    <button id="menu-btn" aria-label="Menu">
+      <span></span><span></span><span></span>
+    </button>
+    <div id="menu-dropdown">
+      <button onclick="openPage('history')">📋 Cronologia</button>
+      <button onclick="openPage('theme')">🎨 Tema</button>
+      <button onclick="openPage('changelog')">🆕 Novità</button>
+      <button onclick="openPage('manual')">📖 Manuale d'uso</button>
+    </div>
+  </div>
+
+  <!-- WAVE + SWIMMER -->
+  <div id="wave-area">
+    <canvas id="swim-canvas"></canvas>
+  </div>
+
+  <!-- SETUP BAR -->
+  <div id="setup-bar">
+    <button id="btn-setup">⚙️ Imposta atleta e specialità</button>
+    <div id="setup-info"></div>
+  </div>
+
+  <!-- TIMER -->
+  <div id="timer-area">
+    <div id="display-lap-counter"><span>vasca</span>—</div>
+    <div id="display-total">00:00.00</div>
+    <div id="display-lap">00:00.00</div>
+  </div>
+
+  <!-- CONTROLS -->
+  <div id="controls">
+    <button class="ctrl-btn" id="btn-startstop">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M8,5v14l11-7z"/></svg>
+      Start
+    </button>
+    <button class="ctrl-btn" id="btn-lap" disabled>Vasca</button>
+    <button class="ctrl-btn" id="btn-reset" disabled>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="#90A4AE"><path d="M12,5V1L7,6l5,5V7c3.31,0 6,2.69 6,6s-2.69,6-6,6-6-2.69-6-6H4c0,4.42 3.58,8 8,8s8-3.58 8-8-3.58-8-8-8z"/></svg>
+    </button>
+  </div>
+
+  <!-- LAPS -->
+  <div id="laps-area">
+    <div id="laps-list">
+      <div id="laps-empty" style="padding:20px;text-align:center;color:var(--text-secondary);font-size:13px;">Nessuna vasca registrata</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- HISTORY MODAL -->
+<div class="modal-overlay" id="modal-history" style="align-items:stretch;">
+  <div class="modal-sheet" style="border-radius:18px 18px 0 0; height:85vh; display:flex; flex-direction:column; padding:0;">
+    <div style="padding:18px 20px 12px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.08);">
+      <span style="font-size:17px; font-weight:700;">📋 Cronologia</span>
+      <button onclick="closeModal('modal-history')" style="background:none;border:none;color:var(--text-secondary);font-size:22px;cursor:pointer;line-height:1;">×</button>
+    </div>
+    <div id="history-list" style="flex:1; overflow-y:auto; padding:12px 16px 24px;"></div>
+  </div>
+</div>
+
+<!-- SAVE SESSION MODAL -->
+<div class="modal-overlay" id="modal-save">
+  <div class="modal-sheet">
+    <div class="modal-title">💾 Salva Gara</div>
+
+    <div class="modal-field">
+      <label>👤 Nome atleta</label>
+      <input type="text" id="save-athlete" placeholder="es. Mario Rossi">
+    </div>
+
+    <div class="modal-divider"></div>
+    <div class="modal-section-title">🏊 Specialità</div>
+
+    <div class="modal-row">
+      <div class="modal-field" style="flex:1">
+        <label>Distanza</label>
+        <select id="save-distance" onchange="updateSavePreview()">
+          <option value="">—</option>
+          <option value="25m">25m</option>
+          <option value="50m">50m</option>
+          <option value="100m">100m</option>
+          <option value="200m">200m</option>
+          <option value="400m">400m</option>
+          <option value="800m">800m</option>
+          <option value="1500m">1500m</option>
+        </select>
+      </div>
+      <div class="modal-field" style="flex:1">
+        <label>Stile</label>
+        <select id="save-style" onchange="updateSavePreview()">
+          <option value="">—</option>
+          <option>Stile Libero</option>
+          <option>Dorso</option>
+          <option>Rana</option>
+          <option>Farfalla</option>
+          <option>Misti</option>
+        </select>
+      </div>
+    </div>
+
+    <div id="save-preview" style="
+      font-size:13px; color:#FFD600; font-weight:600;
+      text-align:center; min-height:18px; margin: 6px 0 4px;
+    "></div>
+
+    <div class="modal-divider"></div>
+
+    <div class="modal-actions" style="gap:8px;">
+      <button class="btn-secondary" onclick="closeModal('modal-save')" style="flex:1">Annulla</button>
+      <button class="btn-danger"    onclick="state._discarding=true; closeModal('modal-save'); resetTimer();" style="flex:1">Scarta</button>
+      <button class="btn-primary"   onclick="confirmSave()" style="flex:1.3">Salva</button>
+    </div>
+  </div>
+</div>
+
+
+<div class="modal-overlay" id="modal-setup">
+  <div class="modal-sheet">
+    <div class="modal-title">Imposta sessione</div>
+    <div class="modal-field">
+      <label>Nome atleta</label>
+      <input type="text" id="input-athlete" placeholder="es. Mario Rossi">
+    </div>
+    <div class="modal-field">
+      <label>Distanza</label>
+      <select id="input-distance" onchange="updateLapsCount()">
+        <option value="">— non specificata —</option>
+        <option value="25m">25m</option>
+        <option value="50m">50m</option>
+        <option value="100m">100m</option>
+        <option value="200m">200m</option>
+        <option value="400m">400m</option>
+        <option value="800m">800m</option>
+        <option value="1500m">1500m</option>
+      </select>
+    </div>
+    <div class="modal-field">
+      <label>Stile</label>
+      <select id="input-style">
+        <option value="">— non specificato —</option>
+        <option>Stile Libero</option><option>Dorso</option>
+        <option>Rana</option><option>Farfalla</option><option>Misto</option>
+      </select>
+    </div>
+    <div class="modal-field">
+      <label>Lunghezza vasca</label>
+      <select id="input-pool-length" onchange="updateLapsCount()">
+        <option value="">— non specificata —</option>
+        <option value="25">25m (vasca corta)</option>
+        <option value="50">50m (vasca lunga)</option>
+        <option value="open">Acque libere</option>
+      </select>
+    </div>
+    <div class="modal-field" id="field-laps-count" style="display:none">
+      <label>Vasche previste</label>
+      <div id="laps-count-display" style="
+        background: rgba(255,255,255,0.08);
+        border: 1px solid rgba(255,255,255,0.15);
+        border-radius: 8px;
+        padding: 10px 12px;
+        font-size: 15px;
+        color: var(--text-secondary);
+      ">—</div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeModal('modal-setup')">Annulla</button>
+      <button class="btn-primary"   onclick="saveSetup()">Conferma</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── STATE ──────────────────────────────────────────────────────
+const state = {
+  running:    false,
+  startTime:  0,
+  lapStart:   0,
+  elapsed:    0,
+  lapElapsed: 0,
+  laps:       [],
+  rafId:      null,
+  setup: { athlete: '', distance: '', style: '', poolLength: '', lapsCount: '' }
+};
+
+// ── TIMER ──────────────────────────────────────────────────────
+function fmt(ms) {
+  const total = Math.floor(ms / 10);
+  const cs    = total % 100;
+  const s     = Math.floor(total / 100) % 60;
+  const m     = Math.floor(total / 6000);
+  return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}.${String(cs).padStart(2,'0')}`;
+}
+
+function tick() {
+  const now = performance.now();
+  state.elapsed    = now - state.startTime;
+  state.lapElapsed = now - state.lapStart;
+  document.getElementById('display-total').textContent = fmt(state.elapsed);
+  document.getElementById('display-lap').textContent   = fmt(state.lapElapsed);
+  const lapNum    = state.laps.length + 1;
+  const lapTotal  = state.setup.lapsCount;
+  const isOpen    = state.setup.isOpenWater;
+  const counter   = document.getElementById('display-lap-counter');
+  const labelSpan = counter.querySelector('span');
+
+  if (isOpen) {
+    labelSpan.textContent = 'int.';
+    counter.childNodes[1].textContent = lapNum > 1 ? (lapNum - 1) : '—';
+  } else {
+    labelSpan.textContent = 'vasca';
+    counter.childNodes[1].textContent = lapTotal ? `${lapNum}/${lapTotal}` : `${lapNum}`;
+  }
+  state.rafId = requestAnimationFrame(tick);
+}
+
+function toggleTimer() {
+  if (!state.running) {
+    // START
+    state.startTime = performance.now() - state.elapsed;
+    state.lapStart  = performance.now() - state.lapElapsed;
+    state.running   = true;
+    state.rafId     = requestAnimationFrame(tick);
+
+    const btn = document.getElementById('btn-startstop');
+    btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="white"><rect x="6" y="5" width="4" height="14"/><rect x="14" y="5" width="4" height="14"/></svg> Stop';
+    btn.classList.add('running');
+    document.getElementById('btn-lap').disabled   = false;
+    document.getElementById('btn-reset').disabled = true;
+    document.getElementById('btn-setup').style.display = 'none';
+    document.getElementById('setup-info').style.display = 'block';
+    document.getElementById('display-lap-counter').style.display = 'block';
+    startSwimmer();
+
+  } else {
+    // STOP
+    cancelAnimationFrame(state.rafId);
+    const now = performance.now();
+    state.elapsed    = now - state.startTime;
+    state.lapElapsed = now - state.lapStart;
+    recordLap();
+    state.running = false;
+
+    const btn = document.getElementById('btn-startstop');
+    btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M8,5v14l11-7z"/></svg> Start';
+    btn.classList.remove('running');
+    document.getElementById('btn-lap').disabled   = true;
+    document.getElementById('btn-reset').disabled = false;
+    stopSwimmer();
+  }
+}
+
+function recordLap() {
+  const lapMs = state.lapElapsed;
+  state.laps.push({ ms: lapMs, total: state.elapsed });
+  state.lapStart   = performance.now();
+  state.lapElapsed = 0;
+  lapTumble();
+  renderLaps();
+}
+
+function resetTimer() {
+  cancelAnimationFrame(state.rafId);
+  state.running    = false;
+  state.elapsed    = 0;
+  state.lapElapsed = 0;
+  state.laps       = [];
+
+  document.getElementById('display-total').textContent = '00:00.00';
+  document.getElementById('display-lap').textContent   = '00:00.00';
+  document.getElementById('display-lap-counter').style.display = 'none';
+  resetSwimmer();
+
+  const btn = document.getElementById('btn-startstop');
+  btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M8,5v14l11-7z"/></svg> Start';
+  btn.classList.remove('running');
+  document.getElementById('btn-lap').disabled   = true;
+  document.getElementById('btn-reset').disabled = true;
+  document.getElementById('btn-setup').style.display = 'block';
+  document.getElementById('setup-info').style.display = 'none';
+  document.getElementById('swimmer').classList.remove('swimming');
+  renderLaps();
+}
+
+// ── LAPS RENDER ────────────────────────────────────────────────
+function renderLaps() {
+  const list = document.getElementById('laps-list');
+
+  if (state.laps.length === 0) {
+    list.innerHTML = '<div id="laps-empty" style="padding:20px;text-align:center;color:var(--text-secondary);font-size:13px;">Nessuna vasca registrata</div>';
+    return;
+  }
+
+  const times   = state.laps.map(l => l.ms);
+  const minTime = Math.min(...times);
+  const maxTime = Math.max(...times);
+
+  list.innerHTML = '';
+  [...state.laps].reverse().forEach((lap, ri) => {
+    const i          = state.laps.length - 1 - ri;
+    const isFastest  = lap.ms === minTime && state.laps.length > 1;
+    const isSlowest  = lap.ms === maxTime && state.laps.length > 1;
+    const prev       = i > 0 ? state.laps[i - 1].ms : null;
+    const delta      = prev !== null ? lap.ms - prev : null;
+    const deltaStr   = delta !== null ? (delta >= 0 ? '+' : '') + fmt(Math.abs(delta)) : '';
+    const lapLabel   = state.setup.isOpenWater ? 'Int.' : 'V.';
+
+    const div = document.createElement('div');
+    div.className = 'lap-item' + (isFastest ? ' fastest' : isSlowest ? ' slowest' : '');
+    div.innerHTML = `
+      <span class="lap-num">${lapLabel}${i + 1}</span>
+      <span class="lap-time">${fmt(lap.ms)}</span>
+      <span class="lap-delta">${deltaStr}</span>
+      ${isFastest ? '<span class="lap-badge fast">Veloce</span>' : ''}
+      ${isSlowest ? '<span class="lap-badge slow">Lenta</span>'  : ''}
+    `;
+    list.appendChild(div);
+  });
+}
+
+// ── SWIMMER CANVAS ─────────────────────────────────────────────
+const SC = {
+  x: -80, dir: 1, speed: 0,
+  phase: 0,          // ciclo bracciata 0..2π
+  tumbling: false,
+  tumbleAngle: 0,
+  tumbleDir: 0,
+  active: false,
+  waveOffset: 0,
+  raf: null,
+  last: 0,
+};
+
+const canvas  = document.getElementById('swim-canvas');
+const ctx     = canvas.getContext('2d');
+
+function resizeCanvas() {
+  canvas.width  = canvas.offsetWidth;
+  canvas.height = canvas.offsetHeight;
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+// Disegna il nuotatore centrato in (0,0), diretto verso dx
+// phase = ciclo bracciata (0..2π)
+function drawSwimmer(phase) {
+  const skin  = '#D4A574';
+  const suit  = '#1565C0';
+  const cap   = '#FFD600';
+  const goggle= '#29B6F6';
+
+  ctx.lineCap = 'round';
+  ctx.lineJoin= 'round';
+
+  // ── KICKING gambe alternate ──
+  const kickA =  Math.sin(phase * 2) * 10;   // gamba A
+  const kickB = -Math.sin(phase * 2) * 10;   // gamba B (sfasata)
+
+  // gamba sinistra
+  ctx.save();
+  ctx.strokeStyle = skin; ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.moveTo(-10, 4);
+  ctx.quadraticCurveTo(-22, 4 + kickA * 0.4, -36, 2 + kickA * 0.7);
+  ctx.stroke();
+  // piede sx
+  ctx.beginPath();
+  ctx.moveTo(-36, 2 + kickA * 0.7);
+  ctx.lineTo(-42, 2 + kickA);
+  ctx.stroke();
+  ctx.restore();
+
+  // gamba destra
+  ctx.save();
+  ctx.strokeStyle = skin; ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.moveTo(-8, 6);
+  ctx.quadraticCurveTo(-20, 6 + kickB * 0.4, -34, 4 + kickB * 0.7);
+  ctx.stroke();
+  // piede dx
+  ctx.beginPath();
+  ctx.moveTo(-34, 4 + kickB * 0.7);
+  ctx.lineTo(-40, 4 + kickB);
+  ctx.stroke();
+  ctx.restore();
+
+  // ── TORSO ──
+  ctx.save();
+  ctx.fillStyle = suit;
+  ctx.beginPath();
+  ctx.ellipse(0, 2, 22, 7, -0.08, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  // ── BRACCIA stile libero - alternate sfasate di π ──
+  // Ciclo per ciascun braccio: 0..π = trazione in acqua, π..2π = recupero aereo
+  // I due bracci sono sfasati di π tra loro
+
+  function drawOneArm(armPhase, shoulderY) {
+    const a = ((armPhase % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+    const inWater = a < Math.PI;
+    const t = inWater ? a / Math.PI : (a - Math.PI) / Math.PI; // 0..1 dentro ogni metà
+
+    const sx = 8, sy = shoulderY;
+    let ex, ey, cpx, cpy;
+
+    if (inWater) {
+      // trazione: braccio va da avanti (+x) a dietro (-x), leggermente sotto
+      ex  = sx + 26 - t * 52;          // da +34 a -18
+      ey  = sy + 3 + Math.sin(t * Math.PI) * 5;
+      cpx = sx + (ex - sx) * 0.5;
+      cpy = sy + 8;
+      ctx.save();
+      ctx.globalAlpha = 0.65;          // sotto l'acqua = più scuro
+      ctx.strokeStyle = skin;
+      ctx.lineWidth   = 4;
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      ctx.quadraticCurveTo(cpx, cpy, ex, ey);
+      ctx.stroke();
+      ctx.restore();
+    } else {
+      // recupero aereo: arco alto sopra il corpo, da dietro a davanti
+      ex  = sx + (t * 52) - 18;        // da -18 a +34
+      ey  = sy - 2;
+      // punto di controllo in ALTO per fare l'arco sopra l'acqua
+      cpx = sx + (ex - sx) * 0.5;
+      cpy = sy - 16 - Math.sin(t * Math.PI) * 10;
+      ctx.save();
+      ctx.globalAlpha = 1.0;
+      ctx.strokeStyle = skin;
+      ctx.lineWidth   = 3.5;
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      ctx.quadraticCurveTo(cpx, cpy, ex, ey);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // mano
+    ctx.save();
+    ctx.globalAlpha = inWater ? 0.65 : 1.0;
+    ctx.fillStyle = skin;
+    ctx.beginPath();
+    ctx.ellipse(ex, ey, 4, 2.5, Math.atan2(ey - sy, ex - sx), 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // braccio destro (più vicino alla testa, spalla alta)
+  drawOneArm(phase, -4);
+  // braccio sinistro sfasato di π (opposto)
+  drawOneArm(phase + Math.PI, 0);
+
+  // ── TESTA ──
+  ctx.save();
+  // leggera rotazione testa per respirazione
+  const breathTilt = Math.sin(phase) > 0.85 ? 0.25 : 0;
+  ctx.translate(20, -3);
+  ctx.rotate(breathTilt);
+
+  // testa
+  ctx.fillStyle = skin;
+  ctx.beginPath();
+  ctx.ellipse(0, 0, 9, 8, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // cuffia
+  ctx.fillStyle = cap;
+  ctx.beginPath();
+  ctx.ellipse(0, -3, 9, 6, 0, Math.PI, 0);
+  ctx.fill();
+
+  // occhialini
+  ctx.strokeStyle = goggle; ctx.lineWidth = 1.5;
+  ctx.fillStyle   = 'rgba(41,182,246,0.2)';
+  ctx.beginPath(); ctx.ellipse(-4, 1, 3, 2, 0, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.ellipse( 3, 1, 3, 2, 0, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+  // ponte
+  ctx.beginPath(); ctx.moveTo(-1, 1); ctx.lineTo(0, 1); ctx.stroke();
+  // riflesso
+  ctx.fillStyle = 'rgba(255,255,255,0.5)';
+  ctx.beginPath(); ctx.ellipse(-5, 0, 1.2, 0.8, -0.3, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse( 2, 0, 1.2, 0.8, -0.3, 0, Math.PI*2); ctx.fill();
+
+  ctx.restore();
+}
+
+function getThemeColors() {
+  const s = getComputedStyle(document.documentElement);
+  return {
+    waveTop: s.getPropertyValue('--wave-top').trim() || '#0D3B5E',
+    waveBot: s.getPropertyValue('--wave-bot').trim() || '#1565A0',
+    waveC1:  s.getPropertyValue('--wave-c1').trim()  || 'rgba(41,182,246,0.30)',
+    waveC2:  s.getPropertyValue('--wave-c2').trim()  || 'rgba(2,136,209,0.25)',
+  };
+}
+
+function drawWave(t) {
+  const W = canvas.width, H = canvas.height;
+  const tc = getThemeColors();
+
+  const grad = ctx.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, tc.waveTop);
+  grad.addColorStop(1, tc.waveBot);
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.fillStyle = tc.waveC1;
+  ctx.beginPath();
+  ctx.moveTo(0, H);
+  for (let x = 0; x <= W; x += 4) {
+    const y = H * 0.6 + Math.sin((x / W) * Math.PI * 4 + t) * 5
+                       + Math.sin((x / W) * Math.PI * 6 + t * 1.3) * 3;
+    ctx.lineTo(x, y);
+  }
+  ctx.lineTo(W, H); ctx.closePath(); ctx.fill();
+
+  ctx.fillStyle = tc.waveC2;
+  ctx.beginPath();
+  ctx.moveTo(0, H);
+  for (let x = 0; x <= W; x += 4) {
+    const y = H * 0.7 + Math.sin((x / W) * Math.PI * 5 + t * 0.8 + 1) * 4
+                       + Math.sin((x / W) * Math.PI * 3 + t * 1.1) * 3;
+    ctx.lineTo(x, y);
+  }
+  ctx.lineTo(W, H); ctx.closePath(); ctx.fill();
+}
+
+function canvasLoop(now) {
+  const dt = Math.min(now - SC.last, 50);
+  SC.last  = now;
+  SC.waveOffset += dt * 0.002;
+
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+
+  drawWave(SC.waveOffset);
+
+  if (SC.active) {
+    SC.phase += dt * 0.004;
+
+    if (SC.tumbling) {
+      // durante la capriola: ruota e non avanza
+      SC.tumbleAngle += SC.tumbleDir * dt * 0.012;
+      if (Math.abs(SC.tumbleAngle) >= Math.PI) {
+        // capriola completata
+        SC.tumbling    = false;
+        SC.tumbleAngle = 0;
+        SC.dir        *= -1;
+        // riposiziona appena dentro il bordo opposto
+        SC.x = SC.dir === 1 ? -10 : W + 10;
+      }
+    } else {
+      // avanza normalmente
+      SC.x += SC.dir * SC.speed * dt;
+      // controlla bordi SOLO se non sta già girando
+      if (SC.dir === 1  && SC.x > W + 5)  startTumble();
+      if (SC.dir === -1 && SC.x < -5)     startTumble();
+    }
+
+    const bob = Math.sin(SC.waveOffset * 3) * 2.5;
+    const cy  = H * 0.42 + bob;
+
+    ctx.save();
+    ctx.translate(SC.x, cy);
+
+    if (SC.tumbling) {
+      ctx.rotate(SC.tumbleAngle);
+    } else if (SC.dir === -1) {
+      ctx.scale(-1, 1);
+    }
+
+    drawSwimmer(SC.phase);
+    ctx.restore();
+  }
+
+  SC.raf = requestAnimationFrame(canvasLoop);
+}
+
+function startTumble() {
+  if (SC.tumbling) return;
+  SC.tumbling    = true;
+  SC.tumbleDir   = SC.dir;   // ruota nella direzione di marcia
+  SC.tumbleAngle = 0;
+}
+
+function startSwimmer() {
+  SC.x           = -80;
+  SC.dir         = 1;
+  SC.phase       = 0;
+  SC.speed       = canvas.width / 4000;
+  SC.tumbling    = false;
+  SC.tumbleAngle = 0;
+  SC.active      = true;
+}
+
+function stopSwimmer() {
+  SC.active = false;
+}
+
+function resetSwimmer() {
+  SC.active      = false;
+  SC.x           = -80;
+  SC.dir         = 1;
+  SC.tumbling    = false;
+  SC.tumbleAngle = 0;
+}
+
+function lapTumble() {
+  if (!state.running) return;
+  startTumble();
+}
+
+// avvia il loop canvas subito
+SC.last = performance.now();
+canvasLoop(SC.last);
+
+
+
+function updateLapButtonLabel() {
+  const label = state.setup.isOpenWater ? 'Intermedio' : 'Vasca';
+  document.getElementById('btn-lap').textContent = label;
+}
+
+function updateLapsCount() {
+  const poolVal = document.getElementById('input-pool-length').value;
+  const dist    = parseInt(document.getElementById('input-distance').value);
+  const pool    = parseInt(poolVal);
+  const field   = document.getElementById('field-laps-count');
+  const display = document.getElementById('laps-count-display');
+
+  if (poolVal === 'open') {
+    // acque libere: nessun conteggio vasche, ma mostra info
+    state.setup.lapsCount  = 0;
+    state.setup.isOpenWater = true;
+    field.style.display    = 'block';
+    display.textContent    = 'Nessuna vasca — parziali intermedi';
+  } else if (dist && pool) {
+    const total = Math.round(dist / pool);
+    state.setup.lapsCount   = total;
+    state.setup.isOpenWater = false;
+    display.textContent     = total + ' vasche';
+    field.style.display     = 'block';
+  } else {
+    state.setup.lapsCount   = 0;
+    state.setup.isOpenWater = false;
+    field.style.display     = 'none';
+  }
+}
+
+function saveSetup() {
+  state.setup.athlete     = document.getElementById('input-athlete').value.trim();
+  state.setup.distance    = document.getElementById('input-distance').value;
+  state.setup.style       = document.getElementById('input-style').value;
+  state.setup.poolLength  = document.getElementById('input-pool-length').value;
+  state.setup.isOpenWater = state.setup.poolLength === 'open';
+  // lapsCount e isOpenWater già aggiornati da updateLapsCount()
+
+  const parts = [];
+  if (state.setup.athlete)    parts.push(state.setup.athlete);
+  if (state.setup.distance)   parts.push(state.setup.distance);
+  if (state.setup.style)      parts.push(state.setup.style);
+  if (state.setup.isOpenWater)        parts.push('Acque libere');
+  else if (state.setup.poolLength)    parts.push('vasca ' + state.setup.poolLength + 'm');
+  if (state.setup.lapsCount)          parts.push(state.setup.lapsCount + ' vasche');
+
+  const info = document.getElementById('setup-info');
+  info.textContent = parts.length ? parts.join('  ·  ') : 'Sessione senza dettagli';
+
+  // aggiorna label pulsante Vasca/Intermedio
+  updateLapButtonLabel();
+
+  document.getElementById('btn-setup').style.display  = 'none';
+  document.getElementById('setup-info').style.display = 'block';
+  closeModal('modal-setup');
+}
+
+// ── MENU ───────────────────────────────────────────────────────
+document.getElementById('menu-btn').addEventListener('click', (e) => {
+  e.stopPropagation();
+  document.getElementById('menu-dropdown').classList.toggle('open');
+});
+document.addEventListener('click', () => {
+  document.getElementById('menu-dropdown').classList.remove('open');
+});
+
+// ── MODULE 5: TEMI GRAFICI ─────────────────────────────────────
+const THEMES = {
+  light: { label: '☀️ Chiaro',      attr: ''      },
+  dark:  { label: '🌙 Scuro',       attr: 'dark'  },
+  multi: { label: '🌈 Multicolor',  attr: 'multi' },
+};
+
+function applyTheme(key) {
+  const t = THEMES[key];
+  if (!t) return;
+  document.documentElement.setAttribute('data-theme', t.attr);
+  localStorage.setItem('swim_theme', key);
+}
+
+function loadTheme() {
+  const saved = localStorage.getItem('swim_theme') || 'light';
+  applyTheme(saved);
+  return saved;
+}
+
+function showThemeDialog() {
+  const current = localStorage.getItem('swim_theme') || 'light';
+  const overlay = document.createElement('div');
+  overlay.style.cssText = `position:fixed;inset:0;background:rgba(0,0,0,0.7);
+    z-index:500;display:flex;align-items:flex-end;justify-content:center;`;
+
+  const options = Object.entries(THEMES).map(([key, t]) => `
+    <button data-key="${key}" style="
+      width:100%;background:${current===key ? 'rgba(25,118,210,0.3)' : 'transparent'};
+      border:none;border-bottom:1px solid rgba(255,255,255,0.07);
+      color:#fff;font-size:16px;padding:16px 20px;text-align:left;cursor:pointer;
+      display:flex;align-items:center;gap:12px;">
+      ${t.label}
+      ${current===key ? '<span style="margin-left:auto;color:#FFD600;font-size:13px;">✓ Attivo</span>' : ''}
+    </button>`).join('');
+
+  overlay.innerHTML = `
+    <div style="background:var(--pool-mid);border-radius:18px 18px 0 0;
+      width:100%;max-width:480px;padding-bottom:24px;">
+      <div style="padding:18px 20px 10px;font-size:17px;font-weight:700;
+        border-bottom:1px solid rgba(255,255,255,0.08);margin-bottom:4px;">
+        🎨 Scegli tema</div>
+      ${options}
+    </div>`;
+
+  overlay.querySelectorAll('button[data-key]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      applyTheme(btn.dataset.key);
+      overlay.remove();
+    });
+  });
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+}
+
+function openPage(page) {
+  document.getElementById('menu-dropdown').classList.remove('open');
+  if (page === 'history')   { openHistoryModal(); return; }
+  if (page === 'theme')     { showThemeDialog();  return; }
+  if (page === 'changelog') { showChangelog();    return; }
+  if (page === 'manual')    { showManual();       return; }
+}
+
+function showChangelog() {
+  const overlay = document.createElement('div');
+  overlay.style.cssText = `position:fixed;inset:0;background:rgba(0,0,0,0.8);
+    z-index:500;display:flex;align-items:flex-end;justify-content:center;`;
+  overlay.innerHTML = `
+    <div style="background:#fff;border-radius:18px 18px 0 0;
+      width:100%;max-width:480px;max-height:85vh;display:flex;flex-direction:column;">
+      <div style="padding:18px 20px 12px;display:flex;justify-content:space-between;
+        align-items:center;border-bottom:1px solid #e0e0e0;">
+        <span style="font-size:17px;font-weight:700;color:#212121;">🆕 Novità e aggiornamenti</span>
+        <button onclick="this.closest('[style*=fixed]').remove()"
+          style="background:none;border:none;font-size:24px;cursor:pointer;color:#555;">×</button>
+      </div>
+      <div style="flex:1;overflow-y:auto;padding:16px 20px 32px;
+        font-family:monospace;font-size:13px;color:#212121;line-height:1.7;">
+        <b>v1.1 — Aprile 2025</b><br>
+        • Rilevamento automatico sirena (FFT)<br>
+        • Compensazione ritardo partenza<br>
+        • Calibrazione sirena<br>
+        • Contatore vasche durante la gara<br>
+        • Badge record 🥇 e miglioramento 📈<br>
+        • Importazione sessioni tramite link<br>
+        • Condivisione sessione via link<br>
+        • Foto atleta allegabile<br>
+        • Tema Multicolor<br>
+        • WakeLock: schermo sempre acceso<br>
+        • Animazione nuotatore migliorata<br><br>
+        <b>v1.0 — Febbraio 2025</b><br>
+        • Prima versione pubblica<br>
+        • Cronometro con registrazione vasche<br>
+        • Storico gare con dettaglio vasche<br>
+        • Tema Chiaro e Scuro<br>
+        • Salvataggio sessioni con nome e specialità<br>
+        • Vasca più veloce in verde, più lenta in rosso
+      </div>
+    </div>`;
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+}
+
+function showManual() {
+  const overlay = document.createElement('div');
+  overlay.style.cssText = `position:fixed;inset:0;background:rgba(0,0,0,0.8);
+    z-index:500;display:flex;align-items:flex-end;justify-content:center;`;
+  overlay.innerHTML = `
+    <div style="background:#fff;border-radius:18px 18px 0 0;
+      width:100%;max-width:480px;max-height:90vh;display:flex;flex-direction:column;">
+      <div style="padding:18px 20px 12px;display:flex;justify-content:space-between;
+        align-items:center;border-bottom:1px solid #e0e0e0;">
+        <span style="font-size:17px;font-weight:700;color:#212121;">📖 Manuale d'uso</span>
+        <button onclick="this.closest('[style*=fixed]').remove()"
+          style="background:none;border:none;font-size:24px;cursor:pointer;color:#555;">×</button>
+      </div>
+      <div style="flex:1;overflow-y:auto;padding:16px 20px 32px;color:#212121;font-size:14px;line-height:1.7;">
+        <b style="color:#0D3B5E;font-size:15px;">🏊 Come usare SwimTimer</b><br><br>
+        <b>1. Setup atleta</b><br>
+        Prima di iniziare tocca il pulsante giallo per impostare nome atleta, distanza, stile e lunghezza vasca. Il numero di vasche viene calcolato automaticamente.<br><br>
+        <b>2. Avvio</b><br>
+        Premi <b>Start</b> per avviare il cronometro. Premi <b>Vasca</b> (o <b>Intermedio</b> in acque libere) ad ogni tocco di parete.<br><br>
+        <b>3. Fine gara</b><br>
+        Premi <b>Stop</b> per fermare il cronometro, poi <b>Reset</b> per salvare o scartare la sessione.<br><br>
+        <b>4. Record</b><br>
+        Se imposti la specialità, l'app confronta automaticamente la vasca più veloce con lo storico. 🥇 = record assoluto, 📈 = migliorato rispetto all'ultima sessione.<br><br>
+        <b>5. Cronologia</b><br>
+        Dal menu → Cronologia puoi vedere tutte le sessioni salvate. Tocca una sessione per il dettaglio. Premi ⋮ per rinominare o eliminare.<br><br>
+        <b>6. Condivisione</b><br>
+        Dal dettaglio sessione → 🔗 Condividi per generare un link da inviare. Il destinatario apre il link e importa la sessione.<br><br>
+        <b>7. Temi</b><br>
+        Dal menu → Tema per scegliere tra Chiaro, Scuro e Multicolor.
+      </div>
+    </div>`;
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+}
+
+// carica tema all'avvio
+loadTheme();
+
+// ── SERVICE WORKER ─────────────────────────────────────────────
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js')
+      .then(reg => console.log('SW registrato:', reg.scope))
+      .catch(err => console.warn('SW non registrato:', err));
+  });
+}
+
+// ── INSTALL PROMPT (banner "Aggiungi alla schermata Home") ─────
+let deferredInstallPrompt = null;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  showInstallBanner();
+});
+
+function showInstallBanner() {
+  if (document.getElementById('install-banner')) return;
+  const banner = document.createElement('div');
+  banner.id = 'install-banner';
+  banner.style.cssText = `
+    position:fixed; bottom:0; left:0; right:0;
+    background:#0D3B5E; color:#fff;
+    padding:12px 16px; display:flex;
+    align-items:center; justify-content:space-between;
+    gap:12px; z-index:600;
+    border-top:1px solid rgba(255,255,255,0.1);
+    box-shadow:0 -4px 16px rgba(0,0,0,0.3);
+    max-width:480px; margin:0 auto;
+  `;
+  banner.innerHTML = `
+    <div style="font-size:14px;line-height:1.4;">
+      <b>📲 Installa SwimTimer</b><br>
+      <span style="font-size:12px;color:#BBE0F0;">
+        Aggiungilo alla schermata home per usarlo offline</span>
+    </div>
+    <div style="display:flex;gap:8px;flex-shrink:0;">
+      <button id="btn-install-dismiss"
+        style="background:transparent;border:1px solid rgba(255,255,255,0.3);
+        color:#BBE0F0;padding:7px 12px;border-radius:8px;font-size:13px;cursor:pointer;">
+        Dopo</button>
+      <button id="btn-install-ok"
+        style="background:#FFD600;border:none;color:#212121;
+        padding:7px 14px;border-radius:8px;font-size:13px;
+        font-weight:700;cursor:pointer;">Installa</button>
+    </div>
+  `;
+  document.body.appendChild(banner);
+
+  document.getElementById('btn-install-ok').addEventListener('click', async () => {
+    banner.remove();
+    if (!deferredInstallPrompt) return;
+    deferredInstallPrompt.prompt();
+    const { outcome } = await deferredInstallPrompt.userChoice;
+    console.log('Install outcome:', outcome);
+    deferredInstallPrompt = null;
+  });
+
+  document.getElementById('btn-install-dismiss').addEventListener('click', () => {
+    banner.remove();
+  });
+}
+
+// Quando l'app viene installata
+window.addEventListener('appinstalled', () => {
+  showToast('✅ SwimTimer installato!');
+  deferredInstallPrompt = null;
+});
+
+
+// ── MODAL ──────────────────────────────────────────────────────
+function openModal(id)  { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+document.getElementById('modal-setup').addEventListener('click', function(e) {
+  if (e.target === this) closeModal('modal-setup');
+});
+
+// ── EVENTS ─────────────────────────────────────────────────────
+document.getElementById('btn-startstop').addEventListener('click', toggleTimer);
+document.getElementById('btn-lap').addEventListener('click', () => { if (state.running) recordLap(); });
+document.getElementById('btn-reset').addEventListener('click', () => resetTimer());
+document.getElementById('btn-setup').addEventListener('click', () => {
+  // pulisce il form solo se non c'è una sessione in corso
+  if (state.laps.length === 0 && !state.running) {
+    document.getElementById('input-athlete').value    = '';
+    document.getElementById('input-distance').value   = '';
+    document.getElementById('input-style').value      = '';
+    document.getElementById('input-pool-length').value= '';
+    document.getElementById('field-laps-count').style.display = 'none';
+    document.getElementById('laps-count-display').textContent = '—';
+  }
+  openModal('modal-setup');
+});
+
+// ── MODULE 2: STORAGE (IndexedDB) ─────────────────────────────
+const DB_NAME    = 'SwimTimerDB';
+const DB_VERSION = 1;
+const STORE      = 'sessions';
+let   db         = null;
+
+function openDB() {
+  return new Promise((resolve, reject) => {
+    if (db) { resolve(db); return; }
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    req.onupgradeneeded = e => {
+      const d = e.target.result;
+      if (!d.objectStoreNames.contains(STORE)) {
+        const store = d.createObjectStore(STORE, { keyPath: 'id' });
+        store.createIndex('date',      'date',      { unique: false });
+        store.createIndex('specialty', 'specialty', { unique: false });
+      }
+    };
+    req.onsuccess = e => { db = e.target.result; resolve(db); };
+    req.onerror   = e => reject(e.target.error);
+  });
+}
+
+async function dbSaveSession(session) {
+  const d = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = d.transaction(STORE, 'readwrite');
+    tx.objectStore(STORE).put(session);
+    tx.oncomplete = () => resolve();
+    tx.onerror    = e => reject(e.target.error);
+  });
+}
+
+async function dbLoadAll() {
+  const d = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx  = d.transaction(STORE, 'readonly');
+    const req = tx.objectStore(STORE).index('date').getAll();
+    req.onsuccess = e => resolve(e.target.result.reverse()); // più recenti prima
+    req.onerror   = e => reject(e.target.error);
+  });
+}
+
+async function dbDeleteSession(id) {
+  const d = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = d.transaction(STORE, 'readwrite');
+    tx.objectStore(STORE).delete(id);
+    tx.oncomplete = () => resolve();
+    tx.onerror    = e => reject(e.target.error);
+  });
+}
+
+async function dbRenameSession(id, newName) {
+  const d = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx    = d.transaction(STORE, 'readwrite');
+    const store = tx.objectStore(STORE);
+    const req   = store.get(id);
+    req.onsuccess = e => {
+      const s = e.target.result;
+      if (!s) { reject('not found'); return; }
+      s.name = newName;
+      store.put(s);
+    };
+    tx.oncomplete = () => resolve();
+    tx.onerror    = e => reject(e.target.error);
+  });
+}
+
+// ── MODULE 4: SISTEMA RECORD ───────────────────────────────────
+const RECORD_NONE     = 0;
+const RECORD_ABSOLUTE = 1;
+const RECORD_IMPROVED = 2;
+const RECORD_BOTH     = 3;
+
+function extractSpecialty(sessionName) {
+  if (!sessionName) return '';
+  const sep = sessionName.indexOf(' — ');
+  return sep >= 0 ? sessionName.substring(sep + 3) : sessionName;
+}
+
+// Fedele a SessionStorage.checkRecord() — esclude la sessione corrente (currentId)
+async function checkRecord(specialty, fastestLap, currentId = null) {
+  if (!specialty) return RECORD_NONE;
+  const all = await dbLoadAll();
+
+  // filtra stessa specialità escludendo sessione corrente (come nell'originale)
+  const same = all.filter(s => {
+    if (currentId && s.id === currentId) return false;
+    // confronta specialty salvata O estratta dal nome
+    const sp = s.specialty || extractSpecialty(s.name);
+    return sp === specialty;
+  });
+
+  if (same.length === 0) return RECORD_NONE;
+
+  let absoluteBest    = Infinity;
+  let lastSessionBest = Infinity;
+  let lastSession     = null;
+
+  for (const s of same) {
+    // best assoluto su tutte le vasche di tutte le sessioni stessa specialità
+    if (s.laps) {
+      for (const l of s.laps) {
+        if (l > 0 && l < absoluteBest) absoluteBest = l;
+      }
+    }
+    // ultima sessione per data
+    if (!lastSession || s.date > lastSession.date) lastSession = s;
+  }
+
+  // best dell'ultima sessione
+  if (lastSession && lastSession.laps) {
+    for (const l of lastSession.laps) {
+      if (l > 0 && l < lastSessionBest) lastSessionBest = l;
+    }
+  }
+
+  const isAbsolute = absoluteBest < Infinity && fastestLap < absoluteBest;
+  const isImproved = lastSessionBest < Infinity && fastestLap < lastSessionBest;
+
+  if (isAbsolute && isImproved) return RECORD_BOTH;
+  if (isAbsolute) return RECORD_ABSOLUTE;
+  if (isImproved) return RECORD_IMPROVED;
+  return RECORD_NONE;
+}
+
+// Banner record post-salvataggio
+function showRecordBanner(recType, sessionName) {
+  if (recType === RECORD_NONE) return;
+
+  const msg   = recType === RECORD_ABSOLUTE ? '🥇 Nuovo record assoluto!'
+              : recType === RECORD_IMPROVED  ? '📈 Tempo migliorato!'
+              : '🥇📈 Record assoluto e migliorato!';
+
+  const banner = document.createElement('div');
+  banner.style.cssText = `
+    position:fixed; top:0; left:0; right:0;
+    background:linear-gradient(135deg,#1565C0,#0D47A1);
+    color:#fff; text-align:center; padding:18px 20px;
+    font-size:18px; font-weight:700; z-index:500;
+    box-shadow:0 4px 20px rgba(0,0,0,0.4);
+    animation: slideDown 0.3s ease;
+  `;
+  banner.innerHTML = `
+    <div>${msg}</div>
+    <div style="font-size:13px;font-weight:400;color:#BBE0F0;margin-top:4px;">
+      ${sessionName}</div>
+  `;
+
+  // aggiungi keyframe se non esiste
+  if (!document.querySelector('#record-style')) {
+    const s = document.createElement('style');
+    s.id = 'record-style';
+    s.textContent = `@keyframes slideDown {
+      from { transform:translateY(-100%); opacity:0; }
+      to   { transform:translateY(0);     opacity:1; }
+    }`;
+    document.head.appendChild(s);
+  }
+
+  document.body.appendChild(banner);
+  setTimeout(() => {
+    banner.style.transition = 'opacity 0.5s';
+    banner.style.opacity = '0';
+    setTimeout(() => banner.remove(), 500);
+  }, 3000);
+}
+
+// Aggiorna renderLapsWithRecord per mostrare badge più visibili
+function renderLapsWithRecord(recType) {
+  const items = document.querySelectorAll('.lap-item.fastest');
+  items.forEach(item => {
+    const old = item.querySelector('.lap-badge.record');
+    if (old) old.remove();
+    if (recType !== RECORD_NONE) {
+      const badge = document.createElement('span');
+      badge.className = 'lap-badge record';
+      badge.style.cssText = `
+        background:rgba(255,214,0,0.2);color:#FFD600;
+        padding:2px 7px;border-radius:8px;font-size:12px;font-weight:700;
+      `;
+      badge.textContent = recType === RECORD_ABSOLUTE ? '🥇'
+                        : recType === RECORD_IMPROVED  ? '📈' : '🥇📈';
+      item.appendChild(badge);
+    }
+  });
+}
+function buildSpecialty(distance, style) {
+  if (!distance && !style) return '';
+  if (!distance) return style;
+  if (!style)    return distance;
+  return distance + ' ' + style;
+}
+
+function recordBadge(type) {
+  if (type === RECORD_ABSOLUTE) return ' 🥇 Record!';
+  if (type === RECORD_IMPROVED) return ' 📈 Migliorato!';
+  if (type === RECORD_BOTH)     return ' 🥇📈 Record + Migliorato!';
+  return '';
+}
+
+async function showSaveDialog() {
+  openModal('modal-save');
+  // i valori nei due select ora sono identici (es. "100m"), assegnazione diretta
+  document.getElementById('save-athlete').value  = state.setup.athlete  || '';
+  document.getElementById('save-distance').value = state.setup.distance || '';
+  document.getElementById('save-style').value    = state.setup.style    || '';
+  await updateSavePreview();
+}
+
+async function updateSavePreview() {
+  const dist      = document.getElementById('save-distance').value;
+  const style     = document.getElementById('save-style').value;
+  const specialty = buildSpecialty(dist, style);
+  const preview   = document.getElementById('save-preview');
+
+  if (!specialty) { preview.textContent = ''; return; }
+
+  const times   = state.laps.map(l => l.ms);
+  const fastest = times.length ? Math.min(...times) : Infinity;
+
+  if (fastest < Infinity) {
+    const rec  = await checkRecord(specialty, fastest);
+    preview.textContent = '→ ' + specialty + recordBadge(rec);
+    renderLapsWithRecord(rec);
+  } else {
+    preview.textContent = '→ ' + specialty;
+  }
+}
+
+async function confirmSave() {
+  const athlete   = document.getElementById('save-athlete').value.trim();
+  const dist      = document.getElementById('save-distance').value;
+  const style     = document.getElementById('save-style').value;
+  const specialty = buildSpecialty(dist, style);
+  const sessionName = athlete
+    ? (specialty ? athlete + ' — ' + specialty : athlete)
+    : (specialty || 'Sessione senza nome');
+
+  const lapsMs  = [...state.laps].map(l => l.ms);
+  const fastest = lapsMs.length ? Math.min(...lapsMs) : 0;
+  const recType = specialty && fastest ? await checkRecord(specialty, fastest) : RECORD_NONE;
+
+  const session = {
+    id:         String(Date.now()),
+    name:       sessionName,
+    date:       Date.now(),
+    totalTime:  state.elapsed,
+    laps:       lapsMs,
+    specialty:  specialty,
+    recordType: recType,
+    imported:   false,
+    photoPath:  ''
+  };
+
+  await dbSaveSession(session);
+  closeModal('modal-save');
+  if (recType !== RECORD_NONE) showRecordBanner(recType, sessionName);
+  else showToast('✅ Gara salvata!');
+  state._discarding = true;
+  resetTimer();
+}
+
+function discardSession() {
+  closeModal('modal-save');
+  resetTimer();
+}
+
+// ── TOAST ──────────────────────────────────────────────────────
+function showToast(msg, duration = 2500) {
+  let toast = document.getElementById('toast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'toast';
+    toast.style.cssText = `
+      position:fixed; bottom:80px; left:50%; transform:translateX(-50%);
+      background:rgba(0,0,0,0.82); color:#fff; padding:10px 22px;
+      border-radius:20px; font-size:14px; z-index:9999;
+      pointer-events:none; transition:opacity 0.3s;
+    `;
+    document.body.appendChild(toast);
+  }
+  toast.textContent = msg;
+  toast.style.opacity = '1';
+  clearTimeout(toast._to);
+  toast._to = setTimeout(() => { toast.style.opacity = '0'; }, duration);
+}
+
+// ── RENDER LAPS WITH RECORD BADGE ─────────────────────────────
+function renderLapsWithRecord(recType) {
+  // aggiunge badge record solo sulla vasca più veloce
+  const items = document.querySelectorAll('.lap-item.fastest');
+  items.forEach(item => {
+    // rimuovi badge record precedente
+    const old = item.querySelector('.lap-badge.record');
+    if (old) old.remove();
+    if (recType !== RECORD_NONE) {
+      const badge = document.createElement('span');
+      badge.className = 'lap-badge record';
+      badge.style.background = 'rgba(255,214,0,0.18)';
+      badge.style.color = '#FFD600';
+      badge.style.padding = '2px 7px';
+      badge.style.borderRadius = '8px';
+      badge.style.fontSize = '12px';
+      badge.textContent = recType === RECORD_ABSOLUTE ? '🥇'
+                        : recType === RECORD_IMPROVED  ? '📈'
+                        : '🥇📈';
+      item.appendChild(badge);
+    }
+  });
+}
+
+// ── HOOK RESET → SAVE DIALOG ───────────────────────────────────
+function resetTimer() {
+  if (state.laps.length > 0 && !state._discarding) {
+    // ferma il timer se sta girando
+    if (state.running) {
+      cancelAnimationFrame(state.rafId);
+      const now = performance.now();
+      state.elapsed    = now - state.startTime;
+      state.lapElapsed = now - state.lapStart;
+      recordLap();
+      state.running = false;
+      const btn = document.getElementById('btn-startstop');
+      btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M8,5v14l11-7z"/></svg> Start';
+      btn.classList.remove('running');
+      document.getElementById('btn-lap').disabled = true;
+      stopSwimmer();
+    }
+    showSaveDialog();
+    return;
+  }
+
+  // reset effettivo
+  cancelAnimationFrame(state.rafId);
+  state.running     = false;
+  state.elapsed     = 0;
+  state.lapElapsed  = 0;
+  state.laps        = [];
+  state._discarding = false;
+  state.setup       = { athlete: '', distance: '', style: '', poolLength: '', lapsCount: 0 };
+
+  document.getElementById('display-total').textContent = '00:00.00';
+  document.getElementById('display-lap').textContent   = '00:00.00';
+  document.getElementById('display-lap-counter').style.display = 'none';
+
+  const btn = document.getElementById('btn-startstop');
+  btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M8,5v14l11-7z"/></svg> Start';
+  btn.classList.remove('running');
+  document.getElementById('btn-lap').disabled   = true;
+  document.getElementById('btn-reset').disabled = true;
+  document.getElementById('btn-setup').style.display  = 'block';
+  document.getElementById('setup-info').style.display = 'none';
+  document.getElementById('setup-info').textContent   = '';
+  document.getElementById('btn-lap').textContent      = 'Vasca';
+  resetSwimmer();
+  renderLaps();
+}
+
+// ── CUSTOM DIALOG (sostituisce prompt/confirm bloccati dal browser) ────
+function showConfirm(message) {
+  return new Promise(resolve => {
+    const overlay = document.createElement('div');
+    overlay.style.cssText = `position:fixed;inset:0;background:rgba(0,0,0,0.7);
+      z-index:999;display:flex;align-items:center;justify-content:center;padding:20px;`;
+    overlay.innerHTML = `
+      <div style="background:#0D3B5E;border-radius:14px;padding:24px 20px;
+        max-width:320px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,0.5);">
+        <div style="font-size:15px;color:#fff;margin-bottom:20px;text-align:center;
+          line-height:1.5;">${message}</div>
+        <div style="display:flex;gap:10px;">
+          <button data-r="false" style="flex:1;padding:11px;border:none;border-radius:8px;
+            background:rgba(255,255,255,0.1);color:#fff;font-size:14px;cursor:pointer;">Annulla</button>
+          <button data-r="true" style="flex:1;padding:11px;border:none;border-radius:8px;
+            background:#C62828;color:#fff;font-size:14px;font-weight:600;cursor:pointer;">Conferma</button>
+        </div>
+      </div>`;
+    overlay.querySelectorAll('button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        overlay.remove();
+        resolve(btn.dataset.r === 'true');
+      });
+    });
+    document.body.appendChild(overlay);
+  });
+}
+
+function showPrompt(message, defaultValue = '') {
+  return new Promise(resolve => {
+    const overlay = document.createElement('div');
+    overlay.style.cssText = `position:fixed;inset:0;background:rgba(0,0,0,0.7);
+      z-index:999;display:flex;align-items:center;justify-content:center;padding:20px;`;
+    overlay.innerHTML = `
+      <div style="background:#0D3B5E;border-radius:14px;padding:24px 20px;
+        max-width:320px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,0.5);">
+        <div style="font-size:15px;color:#fff;margin-bottom:14px;">${message}</div>
+        <input type="text" value="${defaultValue.replace(/"/g,'&quot;')}"
+          style="width:100%;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);
+          border-radius:8px;color:#fff;font-size:15px;padding:10px 12px;outline:none;
+          box-sizing:border-box;margin-bottom:16px;">
+        <div style="display:flex;gap:10px;">
+          <button data-r="cancel" style="flex:1;padding:11px;border:none;border-radius:8px;
+            background:rgba(255,255,255,0.1);color:#fff;font-size:14px;cursor:pointer;">Annulla</button>
+          <button data-r="ok" style="flex:1;padding:11px;border:none;border-radius:8px;
+            background:#1976D2;color:#fff;font-size:14px;font-weight:600;cursor:pointer;">OK</button>
+        </div>
+      </div>`;
+    const input = overlay.querySelector('input');
+    // focus dopo render
+    setTimeout(() => input.focus(), 50);
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { overlay.remove(); resolve(input.value.trim() || null); }
+      if (e.key === 'Escape') { overlay.remove(); resolve(null); }
+    });
+    overlay.querySelector('[data-r="ok"]').addEventListener('click', () => {
+      overlay.remove(); resolve(input.value.trim() || null);
+    });
+    overlay.querySelector('[data-r="cancel"]').addEventListener('click', () => {
+      overlay.remove(); resolve(null);
+    });
+    document.body.appendChild(overlay);
+  });
+}
+
+
+
+async function openHistoryModal() {
+  openModal('modal-history');
+  await renderHistory();
+}
+
+async function renderHistory() {
+  const list     = document.getElementById('history-list');
+  const sessions = await dbLoadAll();
+
+  if (sessions.length === 0) {
+    list.innerHTML = `<div style="text-align:center;color:var(--text-secondary);
+      padding:40px 0;font-size:14px;">Nessuna sessione salvata</div>`;
+    return;
+  }
+
+  // best totalTime per specialità → bordo dorato (fedele a SessionStorage.getBestSessionIdBySpecialty)
+  const bestIdBySpecialty = {};
+  for (const s of sessions) {
+    const sp = s.specialty || '';
+    if (!sp || !s.totalTime) continue;
+    if (!bestIdBySpecialty[sp] || s.totalTime < bestIdBySpecialty[sp].time) {
+      bestIdBySpecialty[sp] = { id: s.id, time: s.totalTime };
+    }
+  }
+
+  list.innerHTML = '';
+  for (const s of sessions) {
+    const date    = new Date(s.date).toLocaleString('it-IT');
+    const sp      = s.specialty || '';
+    const isBest  = sp && bestIdBySpecialty[sp]?.id === s.id;
+
+    const recBadge = s.recordType === RECORD_ABSOLUTE ? ' 🥇'
+                   : s.recordType === RECORD_IMPROVED  ? ' 📈'
+                   : s.recordType === RECORD_BOTH      ? ' 🥇📈' : '';
+    const impBadge = s.imported
+      ? `<span style="background:#FFD600;color:#212121;font-size:10px;
+           font-weight:700;padding:1px 6px;border-radius:8px;margin-left:6px;">IMP</span>` : '';
+    const lapLabel = s.laps ? s.laps.length + (s.laps.length === 1 ? ' vasca' : ' vasche') : '';
+
+    const card = document.createElement('div');
+    card.className = 'history-card';
+    card.style.cssText = `
+      background:rgba(255,255,255,0.06);
+      border-radius:12px;padding:0;
+      margin-bottom:10px;
+      border:2px solid ${isBest ? '#FFD600' : 'transparent'};
+      overflow:hidden;
+    `;
+    card.innerHTML = `
+      <div style="padding:14px 16px;display:flex;
+        justify-content:space-between;align-items:flex-start;gap:8px;">
+        <div class="card-detail-trigger" style="flex:1;min-width:0;cursor:pointer;">
+          <div style="font-size:15px;font-weight:600;
+            white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+            ${s.name}${recBadge}${impBadge}
+          </div>
+          <div style="font-size:12px;color:var(--text-secondary);margin-top:3px;">
+            ${date} · ${lapLabel}
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;">
+          <div style="font-size:18px;font-weight:700;font-family:monospace;color:#FFD600;">
+            ${fmt(s.totalTime)}</div>
+          ${isBest ? '<div style="font-size:10px;color:#FFD600;">🏆 Miglior tempo</div>' : ''}
+          <button class="card-menu-btn" style="background:rgba(255,255,255,0.12);border:none;
+            color:#fff;font-size:14px;padding:3px 10px;border-radius:6px;cursor:pointer;
+            margin-top:2px;">⋮</button>
+        </div>
+      </div>
+      <div class="history-card-actions" style="display:none;
+        border-top:1px solid rgba(255,255,255,0.07);">
+        <button data-action="rename"
+          style="width:50%;background:none;border:none;
+          border-right:1px solid rgba(255,255,255,0.07);
+          color:#BBE0F0;font-size:13px;padding:11px;cursor:pointer;">✏️ Rinomina</button>
+        <button data-action="delete"
+          style="width:50%;background:none;border:none;
+          color:#EF9A9A;font-size:13px;padding:11px;cursor:pointer;">🗑 Elimina</button>
+      </div>
+    `;
+
+    // click sul testo → apre dettaglio
+    card.querySelector('.card-detail-trigger').addEventListener('click', () => openSessionDetail(s));
+
+    // click su ⋮ → toggle azioni
+    card.querySelector('.card-menu-btn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      const actions = card.querySelector('.history-card-actions');
+      const isOpen  = actions.style.display === 'flex';
+      // chiudi tutti
+      document.querySelectorAll('.history-card-actions').forEach(a => a.style.display = 'none');
+      actions.style.display = isOpen ? 'none' : 'flex';
+    });
+
+    card.querySelector('[data-action="rename"]').addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const newName = await showPrompt('Nuovo nome sessione:', s.name);
+      if (!newName || newName === s.name) return;
+      await dbRenameSession(s.id, newName);
+      showToast('✅ Rinominata');
+      await renderHistory();
+    });
+
+    card.querySelector('[data-action="delete"]').addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const ok = await showConfirm(`Eliminare "<b>${s.name}</b>"?`);
+      if (!ok) return;
+      await dbDeleteSession(s.id);
+      showToast('🗑 Sessione eliminata');
+      await renderHistory();
+    });
+
+    list.appendChild(card);
+  }
+}
+
+function toggleCardActions(card) {
+  const actions = card.querySelector('.history-card-actions');
+  const isOpen  = actions.style.display === 'flex';
+  // chiudi tutti gli altri
+  document.querySelectorAll('.history-card-actions').forEach(a => a.style.display = 'none');
+  actions.style.display = isOpen ? 'none' : 'flex';
+}
+
+async function renameSessionPrompt(id, currentName, btn) {
+  const newName = prompt('Nuovo nome sessione:', currentName);
+  if (!newName || newName.trim() === currentName) return;
+  await dbRenameSession(id, newName.trim());
+  showToast('✅ Rinominata');
+  await renderHistory();
+}
+
+async function deleteSessionFromHistory(id, btn) {
+  if (!confirm('Eliminare questa sessione?')) return;
+  await dbDeleteSession(id);
+  showToast('🗑 Sessione eliminata');
+  await renderHistory();
+}
+
+function openSessionDetail(s) {
+  const laps    = s.laps || [];
+  const fastest = laps.length ? Math.min(...laps) : 0;
+  const slowest = laps.length ? Math.max(...laps) : 0;
+  const isOpen  = s.specialty && s.specialty.toLowerCase().includes('acque');
+
+  const recBadge = s.recordType === RECORD_ABSOLUTE ? '🥇 Record assoluto'
+                 : s.recordType === RECORD_IMPROVED  ? '📈 Migliorato'
+                 : s.recordType === RECORD_BOTH      ? '🥇📈 Record + Migliorato' : '';
+
+  const lapsHtml = laps.map((ms, i) => {
+    const isFast  = ms === fastest && laps.length > 1;
+    const isSlow  = ms === slowest && laps.length > 1;
+    const color   = isFast ? 'var(--fast)' : isSlow ? 'var(--slow)' : '#fff';
+    const badge   = isFast ? '<span style="font-size:11px;color:var(--fast);margin-left:6px;">⚡ Veloce</span>'
+                  : isSlow ? '<span style="font-size:11px;color:var(--slow);margin-left:6px;">🐢 Lenta</span>' : '';
+    const label   = isOpen ? `Int. ${i+1}` : `Vasca ${i+1}`;
+    // delta rispetto alla vasca precedente
+    const delta   = i > 0 ? ms - laps[i-1] : null;
+    const deltaStr = delta !== null
+      ? `<span style="font-size:11px;color:var(--text-secondary);margin-left:8px;">
+           ${delta >= 0 ? '+' : ''}${fmt(Math.abs(delta))}</span>` : '';
+    return `
+      <div style="display:flex;align-items:center;padding:9px 0;
+        border-bottom:1px solid rgba(255,255,255,0.05);">
+        <span style="color:var(--text-secondary);font-size:13px;width:60px;">${label}</span>
+        <span style="font-family:monospace;color:${color};font-weight:${isFast?'700':'400'};
+          font-size:15px;">${fmt(ms)}</span>
+        ${deltaStr}${badge}
+      </div>`;
+  }).join('');
+
+  // statistiche
+  const avg = laps.length ? laps.reduce((a,b) => a+b, 0) / laps.length : 0;
+  const statsHtml = laps.length > 1 ? `
+    <div style="display:flex;gap:0;border-radius:8px;overflow:hidden;
+      margin-bottom:14px;background:rgba(255,255,255,0.05);">
+      <div style="flex:1;padding:10px;text-align:center;
+        border-right:1px solid rgba(255,255,255,0.07);">
+        <div style="font-size:11px;color:var(--text-secondary);">Più veloce</div>
+        <div style="font-size:14px;font-family:monospace;color:var(--fast);
+          font-weight:700;">${fmt(fastest)}</div>
+      </div>
+      <div style="flex:1;padding:10px;text-align:center;
+        border-right:1px solid rgba(255,255,255,0.07);">
+        <div style="font-size:11px;color:var(--text-secondary);">Media</div>
+        <div style="font-size:14px;font-family:monospace;color:#fff;">${fmt(avg)}</div>
+      </div>
+      <div style="flex:1;padding:10px;text-align:center;">
+        <div style="font-size:11px;color:var(--text-secondary);">Più lenta</div>
+        <div style="font-size:14px;font-family:monospace;color:var(--slow);">${fmt(slowest)}</div>
+      </div>
+    </div>` : '';
+
+  const overlay = document.createElement('div');
+  overlay.style.cssText = `position:fixed;inset:0;background:rgba(0,0,0,0.85);
+    z-index:300;display:flex;align-items:flex-end;justify-content:center;`;
+  overlay.innerHTML = `
+    <div style="background:var(--pool-mid);border-radius:18px 18px 0 0;
+      width:100%;max-width:480px;max-height:88vh;display:flex;flex-direction:column;">
+
+      <!-- header -->
+      <div style="padding:16px 20px 12px;border-bottom:1px solid rgba(255,255,255,0.08);">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:16px;font-weight:700;
+              white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${s.name}</div>
+            <div style="font-size:12px;color:var(--text-secondary);margin-top:2px;">
+              ${new Date(s.date).toLocaleString('it-IT')}</div>
+          </div>
+          <button onclick="this.closest('[style*=fixed]').remove()"
+            style="background:none;border:none;color:var(--text-secondary);
+            font-size:26px;cursor:pointer;margin-left:12px;line-height:1;">×</button>
+        </div>
+        <!-- tempo totale + badge -->
+        <div style="margin-top:10px;display:flex;align-items:center;gap:12px;">
+          <span style="font-size:28px;font-weight:700;font-family:monospace;
+            color:#FFD600;">⏱ ${fmt(s.totalTime)}</span>
+          ${recBadge ? `<span style="font-size:13px;color:#FFD600;
+            font-weight:600;">${recBadge}</span>` : ''}
+        </div>
+      </div>
+
+      <!-- body scrollabile -->
+      <div style="flex:1;overflow-y:auto;padding:14px 20px 32px;">
+        ${statsHtml}
+        ${lapsHtml || `<p style="color:var(--text-secondary);text-align:center;
+          padding:20px;">Nessuna vasca registrata</p>`}
+      </div>
+
+      <!-- azioni -->
+      <div style="display:flex;border-top:1px solid rgba(255,255,255,0.08);">
+        <button data-action="rename"
+          style="flex:1;background:none;border:none;border-right:1px solid rgba(255,255,255,0.08);
+          color:#BBE0F0;font-size:13px;padding:14px;cursor:pointer;">✏️ Rinomina</button>
+        <button data-action="share"
+          style="flex:1;background:none;border:none;border-right:1px solid rgba(255,255,255,0.08);
+          color:#A5D6A7;font-size:13px;padding:14px;cursor:pointer;">🔗 Condividi</button>
+        <button data-action="delete"
+          style="flex:1;background:none;border:none;
+          color:#EF9A9A;font-size:13px;padding:14px;cursor:pointer;">🗑 Elimina</button>
+      </div>
+    </div>
+  `;
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+
+  // chiudi
+  overlay.querySelector('[style*="font-size:26px"]').addEventListener('click', () => overlay.remove());
+
+  overlay.querySelector('[data-action="rename"]').addEventListener('click', async () => {
+    const newName = await showPrompt('Nuovo nome sessione:', s.name);
+    if (!newName || newName === s.name) return;
+    await dbRenameSession(s.id, newName);
+    showToast('✅ Rinominata');
+    overlay.remove();
+    await renderHistory();
+  });
+
+  overlay.querySelector('[data-action="delete"]').addEventListener('click', async () => {
+    const ok = await showConfirm(`Eliminare "<b>${s.name}</b>"?`);
+    if (!ok) return;
+    await dbDeleteSession(s.id);
+    showToast('🗑 Sessione eliminata');
+    overlay.remove();
+    await renderHistory();
+  });
+
+  overlay.querySelector('[data-action="share"]').addEventListener('click', () => {
+    shareSession(s);
+  });
+
+  document.body.appendChild(overlay);
+}
+
+// ── CONDIVISIONE E IMPORTAZIONE ────────────────────────────────
+function sessionToBase64(session) {
+  const json = JSON.stringify(session);
+  return btoa(unescape(encodeURIComponent(json)));
+}
+
+function base64ToSession(b64) {
+  try {
+    const json = decodeURIComponent(escape(atob(b64)));
+    return JSON.parse(json);
+  } catch(e) { return null; }
+}
+
+function shareSession(session) {
+  const data    = sessionToBase64(session);
+  const baseUrl = window.location.href.split('?')[0];
+  const link    = `${baseUrl}?import=${data}`;
+
+  // mostra il link in un modal con copia
+  const overlay = document.createElement('div');
+  overlay.style.cssText = `position:fixed;inset:0;background:rgba(0,0,0,0.8);
+    z-index:400;display:flex;align-items:center;justify-content:center;padding:20px;`;
+  overlay.innerHTML = `
+    <div style="background:#0D3B5E;border-radius:14px;padding:24px 20px;
+      max-width:340px;width:100%;">
+      <div style="font-size:16px;font-weight:700;color:#fff;margin-bottom:6px;">
+        🔗 Condividi sessione</div>
+      <div style="font-size:13px;color:var(--text-secondary);margin-bottom:14px;">
+        ${session.name}</div>
+      <div style="background:rgba(0,0,0,0.3);border-radius:8px;padding:10px 12px;
+        font-size:11px;color:#BBE0F0;word-break:break-all;margin-bottom:14px;
+        max-height:80px;overflow:hidden;">${link}</div>
+      <div style="display:flex;gap:10px;">
+        <button data-action="close"
+          style="flex:1;padding:11px;border:none;border-radius:8px;
+          background:rgba(255,255,255,0.1);color:#fff;font-size:14px;cursor:pointer;">
+          Chiudi</button>
+        <button data-action="copy"
+          style="flex:1;padding:11px;border:none;border-radius:8px;
+          background:#1976D2;color:#fff;font-size:14px;font-weight:600;cursor:pointer;">
+          📋 Copia link</button>
+      </div>
+      <div id="share-native" style="margin-top:10px;display:none;">
+        <button data-action="native"
+          style="width:100%;padding:11px;border:none;border-radius:8px;
+          background:#2E7D32;color:#fff;font-size:14px;font-weight:600;cursor:pointer;">
+          📤 Condividi con…</button>
+      </div>
+    </div>`;
+
+  overlay.querySelector('[data-action="close"]').addEventListener('click', () => overlay.remove());
+
+  overlay.querySelector('[data-action="copy"]').addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(link);
+      showToast('✅ Link copiato!');
+    } catch(e) {
+      // fallback
+      const ta = document.createElement('textarea');
+      ta.value = link;
+      ta.style.position = 'fixed';
+      ta.style.opacity  = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      ta.remove();
+      showToast('✅ Link copiato!');
+    }
+  });
+
+  // Web Share API se disponibile (mobile)
+  if (navigator.share) {
+    overlay.querySelector('#share-native').style.display = 'block';
+    overlay.querySelector('[data-action="native"]').addEventListener('click', async () => {
+      try {
+        await navigator.share({
+          title: 'SwimTimer — ' + session.name,
+          text:  `Sessione: ${session.name}\nTempo: ${fmt(session.totalTime)}`,
+          url:   link
+        });
+      } catch(e) { /* annullato dall'utente */ }
+    });
+  }
+
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+}
+
+// ── IMPORTAZIONE DA URL ────────────────────────────────────────
+function checkImportFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+  const data   = params.get('import');
+  if (!data) return;
+
+  const session = base64ToSession(data);
+  if (!session) { showToast('❌ Link non valido'); return; }
+
+  // rimuovi parametro dall'URL senza ricaricare
+  const clean = window.location.href.split('?')[0];
+  window.history.replaceState({}, '', clean);
+
+  // mostra dialog importazione
+  const overlay = document.createElement('div');
+  overlay.style.cssText = `position:fixed;inset:0;background:rgba(0,0,0,0.8);
+    z-index:400;display:flex;align-items:center;justify-content:center;padding:20px;`;
+  overlay.innerHTML = `
+    <div style="background:#0D3B5E;border-radius:14px;padding:24px 20px;
+      max-width:340px;width:100%;">
+      <div style="font-size:16px;font-weight:700;color:#fff;margin-bottom:14px;">
+        📥 Importa sessione</div>
+      <div style="background:rgba(0,0,0,0.2);border-radius:8px;padding:12px;margin-bottom:16px;">
+        <div style="font-size:14px;font-weight:600;color:#fff;margin-bottom:4px;">
+          ${session.name}</div>
+        <div style="font-size:13px;color:var(--text-secondary);">
+          ⏱ ${fmt(session.totalTime || 0)} · 
+          ${session.laps ? session.laps.length : 0} vasche</div>
+        <div style="font-size:12px;color:var(--text-secondary);margin-top:4px;">
+          ${session.date ? new Date(session.date).toLocaleString('it-IT') : ''}</div>
+      </div>
+      <div style="display:flex;gap:10px;">
+        <button data-action="cancel"
+          style="flex:1;padding:11px;border:none;border-radius:8px;
+          background:rgba(255,255,255,0.1);color:#fff;font-size:14px;cursor:pointer;">
+          Annulla</button>
+        <button data-action="import"
+          style="flex:1;padding:11px;border:none;border-radius:8px;
+          background:#1976D2;color:#fff;font-size:14px;font-weight:600;cursor:pointer;">
+          📥 Importa</button>
+      </div>
+    </div>`;
+
+  overlay.querySelector('[data-action="cancel"]').addEventListener('click', () => overlay.remove());
+  overlay.querySelector('[data-action="import"]').addEventListener('click', async () => {
+    // assegna nuovo id e segna come importata
+    session.id       = String(Date.now());
+    session.imported = true;
+    await dbSaveSession(session);
+    overlay.remove();
+    showToast('✅ Sessione importata!');
+  });
+
+  document.body.appendChild(overlay);
+}
+
+// controlla import all'avvio
+openDB().then(() => checkImportFromUrl()).catch(console.error);
+
+let wakeLock = null;
+async function requestWakeLock() {
+  try {
+    if ('wakeLock' in navigator) {
+      wakeLock = await navigator.wakeLock.request('screen');
+    }
+  } catch(e) { /* non critico */ }
+}
+document.addEventListener('visibilitychange', async () => {
+  if (wakeLock !== null && document.visibilityState === 'visible' && state.running) {
+    await requestWakeLock();
+  }
+});
+document.getElementById('btn-startstop').addEventListener('click', () => {
+  if (state.running) requestWakeLock();
+  else if (wakeLock) { wakeLock.release(); wakeLock = null; }
+});
+</script>
+</body>
+</html>
