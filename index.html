@@ -568,6 +568,16 @@
       </div>
     </div>
 
+    <div class="modal-field">
+      <label>Lunghezza vasca</label>
+      <select id="save-pool-length" onchange="updateSavePreview()">
+        <option value="">— non specificata —</option>
+        <option value="25">25m (vasca corta)</option>
+        <option value="50">50m (vasca lunga)</option>
+        <option value="open">Acque libere</option>
+      </select>
+    </div>
+
     <div id="save-preview" style="
       font-size:13px; color:#FFD600; font-weight:600;
       text-align:center; min-height:18px; margin: 6px 0 4px;
@@ -1606,10 +1616,10 @@ function recordBadge(type) {
 
 async function showSaveDialog() {
   openModal('modal-save');
-  // i valori nei due select ora sono identici (es. "100m"), assegnazione diretta
-  document.getElementById('save-athlete').value  = state.setup.athlete  || '';
-  document.getElementById('save-distance').value = state.setup.distance || '';
-  document.getElementById('save-style').value    = state.setup.style    || '';
+  document.getElementById('save-athlete').value    = state.setup.athlete    || '';
+  document.getElementById('save-distance').value   = state.setup.distance   || '';
+  document.getElementById('save-style').value      = state.setup.style      || '';
+  document.getElementById('save-pool-length').value= state.setup.poolLength || '';
   await updateSavePreview();
 }
 
@@ -1634,10 +1644,11 @@ async function updateSavePreview() {
 }
 
 async function confirmSave() {
-  const athlete   = document.getElementById('save-athlete').value.trim();
-  const dist      = document.getElementById('save-distance').value;
-  const style     = document.getElementById('save-style').value;
-  const specialty = buildSpecialty(dist, style);
+  const athlete    = document.getElementById('save-athlete').value.trim();
+  const dist       = document.getElementById('save-distance').value;
+  const style      = document.getElementById('save-style').value;
+  const poolLength = document.getElementById('save-pool-length').value;
+  const specialty  = buildSpecialty(dist, style);
   const sessionName = athlete
     ? (specialty ? athlete + ' — ' + specialty : athlete)
     : (specialty || 'Sessione senza nome');
@@ -1653,6 +1664,7 @@ async function confirmSave() {
     totalTime:  state.elapsed,
     laps:       lapsMs,
     specialty:  specialty,
+    poolLength: poolLength,
     recordType: recType,
     imported:   false,
     photoPath:  ''
