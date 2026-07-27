@@ -2132,7 +2132,36 @@ function shareSession(session) {
   const baseUrl = window.location.href.split('?')[0];
   const link    = `${baseUrl}?import=${data}`;
 
-  // mostra il link in un modal con copia
+  // Costruisci testo formattato identico all'originale Android
+  const laps    = session.laps || [];
+  const fastest = laps.length ? Math.min(...laps) : 0;
+  const slowest = laps.length ? Math.max(...laps) : 0;
+  const date    = new Date(session.date).toLocaleString('it-IT', {
+    day:'2-digit', month:'short', year:'numeric',
+    hour:'2-digit', minute:'2-digit'
+  });
+
+  let lapsText = '';
+  laps.forEach((ms, i) => {
+    const isFast = ms === fastest && laps.length > 1;
+    const isSlow = ms === slowest && laps.length > 1;
+    const dot    = isFast ? ' 🟢' : isSlow ? ' 🔴' : '';
+    lapsText += `Vasca ${i+1}: 00:${fmt(ms)}${dot}\n`;
+  });
+
+  const shareText =
+`SwimTimer — Importa sessione
+⇨ ${baseUrl}
+
+🏊 ${session.name}
+📅 ${date}
+⏱ Tempo totale: ${fmt(session.totalTime)}
+
+🏁 Parziali:
+${lapsText}
+📲 Importa in SwimTimer:
+${link}`;
+
   const overlay = document.createElement('div');
   overlay.style.cssText = `position:fixed;inset:0;background:rgba(0,0,0,0.8);
     z-index:400;display:flex;align-items:center;justify-content:center;padding:20px;`;
@@ -2142,25 +2171,20 @@ function shareSession(session) {
       <div style="font-size:16px;font-weight:700;color:#fff;margin-bottom:6px;">
         🔗 Condividi sessione</div>
       <div style="font-size:13px;color:var(--text-secondary);margin-bottom:14px;">
-        ${session.name}</div>
-      <div style="background:rgba(0,0,0,0.3);border-radius:8px;padding:10px 12px;
-        font-size:11px;color:#BBE0F0;word-break:break-all;margin-bottom:14px;
-        max-height:80px;overflow:hidden;">${link}</div>
-      <div style="display:flex;gap:10px;">
-        <button data-action="close"
-          style="flex:1;padding:11px;border:none;border-radius:8px;
-          background:rgba(255,255,255,0.1);color:#fff;font-size:14px;cursor:pointer;">
-          Chiudi</button>
+        ${session.name} · ${fmt(session.totalTime)}</div>
+      <div style="display:flex;flex-direction:column;gap:10px;">
         <button data-action="copy"
-          style="flex:1;padding:11px;border:none;border-radius:8px;
+          style="width:100%;padding:12px;border:none;border-radius:8px;
           background:#1976D2;color:#fff;font-size:14px;font-weight:600;cursor:pointer;">
-          📋 Copia link</button>
-      </div>
-      <div id="share-native" style="margin-top:10px;display:none;">
+          📋 Copia testo e link</button>
         <button data-action="native"
-          style="width:100%;padding:11px;border:none;border-radius:8px;
+          style="width:100%;padding:12px;border:none;border-radius:8px;
           background:#2E7D32;color:#fff;font-size:14px;font-weight:600;cursor:pointer;">
           📤 Condividi con…</button>
+        <button data-action="close"
+          style="width:100%;padding:11px;border:none;border-radius:8px;
+          background:rgba(255,255,255,0.1);color:#fff;font-size:14px;cursor:pointer;">
+          Chiudi</button>
       </div>
     </div>`;
 
@@ -2168,35 +2192,37 @@ function shareSession(session) {
 
   overlay.querySelector('[data-action="copy"]').addEventListener('click', async () => {
     try {
-      await navigator.clipboard.writeText(link);
-      showToast('✅ Link copiato!');
+      await navigator.clipboard.writeText(shareText);
+      showToast('✅ Testo copiato!');
     } catch(e) {
-      // fallback
       const ta = document.createElement('textarea');
-      ta.value = link;
-      ta.style.position = 'fixed';
-      ta.style.opacity  = '0';
+      ta.value = shareText;
+      ta.style.cssText = 'position:fixed;opacity:0;';
       document.body.appendChild(ta);
       ta.select();
       document.execCommand('copy');
       ta.remove();
-      showToast('✅ Link copiato!');
+      showToast('✅ Testo copiato!');
     }
+    overlay.remove();
   });
 
-  // Web Share API se disponibile (mobile)
-  if (navigator.share) {
-    overlay.querySelector('#share-native').style.display = 'block';
-    overlay.querySelector('[data-action="native"]').addEventListener('click', async () => {
-      try {
+  overlay.querySelector('[data-action="native"]').addEventListener('click', async () => {
+    try {
+      if (navigator.share) {
         await navigator.share({
           title: 'SwimTimer — ' + session.name,
-          text:  `Sessione: ${session.name}\nTempo: ${fmt(session.totalTime)}`,
+          text:  shareText,
           url:   link
         });
-      } catch(e) { /* annullato dall'utente */ }
-    });
-  }
+      } else {
+        // fallback: copia testo
+        await navigator.clipboard.writeText(shareText);
+        showToast('✅ Testo copiato!');
+      }
+    } catch(e) { /* annullato */ }
+    overlay.remove();
+  });
 
   overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
   document.body.appendChild(overlay);
